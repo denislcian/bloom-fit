@@ -1,0 +1,8 @@
+
+{
+  "name": "BloomFit",
+  "description": "Tu compañero táctico de fitness. Registro de marcas reales, técnica de ejercicios y coach AI basado en Gemini.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

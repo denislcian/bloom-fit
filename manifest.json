@@ -1,0 +1,18 @@
+
+{
+  "name": "BloomFit Tactical",
+  "short_name": "BloomFit",
+  "description": "App personal de entrenamiento táctico e hipertrofia.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3048/3048366.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
