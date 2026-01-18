@@ -21,5 +21,18 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "categories": [
+    "fitness",
+    "health"
+  ],
+  "screenshots": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3048/3048366.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Homescreen"
+    }
   ]
 }
