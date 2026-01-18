@@ -15,27 +15,51 @@ interface WorkoutLoggerProps {
 const CATEGORIES = ['Todos', 'Cuádriceps', 'Isquios y Glúteo', 'Empuje (Push)', 'Tracción (Pull)', 'Core y Blindaje', 'Carga y Cardio'];
 
 const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history, routineToLoad }) => {
-  const [title, setTitle] = useState(routineToLoad?.name || 'Sesión Táctica');
-  const [exercises, setExercises] = useState<Exercise[]>(
-    routineToLoad?.exercises?.map((e: any) => ({
-      id: Math.random().toString(36).substr(2, 9),
-      name: e.name,
-      sets: Array.from({ length: e.setsCount || 3 }).map(() => ({
-        id: Math.random().toString(36).substr(2, 9), weight: 0, reps: 0, completed: false
-      }))
-    })) || []
-  );
-  
-  const [seconds, setSeconds] = useState(0);
+  const SESSION_KEY = 'bloom_active_session_v1';
+
+  // Lazy init for persistence
+  const [title, setTitle] = useState(() => {
+    if (routineToLoad) return routineToLoad.name;
+    const saved = localStorage.getItem(SESSION_KEY);
+    return saved ? JSON.parse(saved).title : 'Sesión Táctica';
+  });
+
+  const [exercises, setExercises] = useState<Exercise[]>(() => {
+    if (routineToLoad) {
+      return routineToLoad.exercises?.map((e: any) => ({
+        id: Math.random().toString(36).substr(2, 9),
+        name: e.name,
+        sets: Array.from({ length: e.setsCount || 3 }).map(() => ({
+          id: Math.random().toString(36).substr(2, 9), weight: 0, reps: 0, completed: false
+        }))
+      })) || [];
+    }
+    const saved = localStorage.getItem(SESSION_KEY);
+    return saved ? JSON.parse(saved).exercises : [];
+  });
+
+  const [seconds, setSeconds] = useState(() => {
+    if (routineToLoad) return 0;
+    const saved = localStorage.getItem(SESSION_KEY);
+    return saved ? JSON.parse(saved).seconds : 0;
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [showCatalog, setShowCatalog] = useState(false);
   const [previewExercise, setPreviewExercise] = useState<ExerciseInfo | null>(null);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  // Persistence effect
+  useEffect(() => {
+    const data = { title, exercises, seconds };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+  }, [title, exercises, seconds]);
 
   // Timer logic
   useEffect(() => {
     const interval = setInterval(() => {
-      setSeconds(s => s + 1);
+      setSeconds((s: number) => s + 1);
     }, 1000);
     return () => clearInterval(interval);
   }, []);
@@ -88,11 +112,11 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
         const lastSet = ex.sets[ex.sets.length - 1];
         return {
           ...ex,
-          sets: [...ex.sets, { 
-            id: Math.random().toString(36).substr(2, 9), 
-            weight: lastSet?.weight || 0, 
-            reps: lastSet?.reps || 0, 
-            completed: false 
+          sets: [...ex.sets, {
+            id: Math.random().toString(36).substr(2, 9),
+            weight: lastSet?.weight || 0,
+            reps: lastSet?.reps || 0,
+            completed: false
           }]
         };
       }
@@ -127,33 +151,62 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
       caloriesBurned: Math.round(calories),
       duration: seconds
     };
+    localStorage.removeItem(SESSION_KEY); // Clear session
     onSave(workout);
+  };
+
+  const handleCancelClick = () => {
+    if (exercises.length > 0) {
+      setShowExitConfirm(true);
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+      onCancel();
+    }
+  };
+
+  const confirmExit = () => {
+    localStorage.removeItem(SESSION_KEY);
+    onCancel();
   };
 
   return (
     <div className="p-6 space-y-6 bg-neutral-950 min-h-full pb-32 animate-in fade-in slide-in-from-right-4 duration-500">
       {previewExercise && <ExercisePreview exercise={previewExercise} onClose={() => setPreviewExercise(null)} />}
 
+      {/* Exit Confirmation Modal */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] flex items-center justify-center p-6 animate-in fade-in duration-200">
+          <div className="bg-neutral-900 border border-red-900/30 p-6 rounded-3xl max-w-sm w-full shadow-2xl space-y-4">
+            <h3 className="text-lg font-black text-red-50 uppercase italic">¿Cancelar entrenamiento?</h3>
+            <p className="text-sm text-neutral-400">Se perderá el progreso de la sesión actual.</p>
+            <div className="flex gap-3">
+              <button onClick={confirmExit} className="flex-1 py-3 bg-red-600/20 text-red-500 font-bold uppercase tracking-widest rounded-xl hover:bg-red-600 hover:text-white transition-all">Sí, Salir</button>
+              <button onClick={() => setShowExitConfirm(false)} className="flex-1 py-3 bg-neutral-800 text-white font-bold uppercase tracking-widest rounded-xl hover:bg-neutral-700 transition-all">Continuar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="sticky top-0 bg-neutral-950/90 backdrop-blur-md z-20 pb-4 border-b border-emerald-900/20 pt-2">
         <div className="flex items-center justify-between mb-2">
-           <div className="flex items-center gap-2 text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-             <Clock size={14} className="animate-pulse" />
-             <span className="text-xs font-mono font-bold">{formatTime(seconds)}</span>
-           </div>
-           <div className="flex gap-3">
-              <button onClick={onCancel} className="p-2 text-neutral-600 hover:text-white transition-colors">
-                <X size={24} />
-              </button>
-              <button 
-                onClick={handleSave} 
-                disabled={exercises.length === 0}
-                className="p-2 bg-emerald-600 rounded-2xl text-white disabled:opacity-30 transition-all hover:bg-emerald-500 shadow-lg shadow-emerald-900/30"
-              >
-                <Save size={24} />
-              </button>
-           </div>
+          <div className="flex items-center gap-2 text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+            <Clock size={14} className="animate-pulse" />
+            <span className="text-xs font-mono font-bold">{formatTime(seconds)}</span>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={handleCancelClick} className="p-2 text-neutral-600 hover:text-white transition-colors">
+              <X size={24} />
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={exercises.length === 0}
+              className="p-2 bg-emerald-600 rounded-2xl text-white disabled:opacity-30 transition-all hover:bg-emerald-500 shadow-lg shadow-emerald-900/30"
+            >
+              <Save size={24} />
+            </button>
+          </div>
         </div>
-        <input 
+        <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="bg-transparent text-xl font-black outline-none w-full border-b border-transparent focus:border-emerald-500 transition-colors placeholder:text-neutral-800 text-white"
@@ -172,7 +225,7 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-bold text-emerald-100">{ex.name}</h3>
                     {catalogInfo && (
-                      <button 
+                      <button
                         onClick={() => setPreviewExercise(catalogInfo)}
                         className="text-emerald-700 hover:text-emerald-400 p-1"
                       >
@@ -198,7 +251,7 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
                   <span>Reps</span>
                   <span className="text-right">Ok</span>
                 </div>
-                
+
                 {ex.sets.map((set, setIdx) => (
                   <div key={set.id} className="grid grid-cols-4 items-center gap-3">
                     <span className="text-xs font-mono text-neutral-600 pl-2">{setIdx + 1}</span>
@@ -219,13 +272,12 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
                       className="bg-neutral-800/40 rounded-xl p-3 text-center text-sm outline-none border border-neutral-800 focus:border-emerald-500/50 transition-colors placeholder:text-neutral-700 text-white"
                     />
                     <div className="flex justify-end pr-1">
-                      <button 
+                      <button
                         onClick={() => updateSet(ex.id, set.id, { completed: !set.completed })}
-                        className={`w-7 h-7 rounded-xl border transition-all flex items-center justify-center ${
-                          set.completed 
-                          ? 'bg-emerald-600 border-emerald-600 text-white' 
-                          : 'border-neutral-800 hover:border-neutral-600'
-                        }`}
+                        className={`w-7 h-7 rounded-xl border transition-all flex items-center justify-center ${set.completed
+                            ? 'bg-emerald-600 border-emerald-600 text-white'
+                            : 'border-neutral-800 hover:border-neutral-600'
+                          }`}
                       >
                         {set.completed && <Check size={16} strokeWidth={4} />}
                       </button>
@@ -234,7 +286,7 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
                 ))}
               </div>
 
-              <button 
+              <button
                 onClick={() => addSet(ex.id)}
                 className="w-full py-2 bg-emerald-950/30 border border-emerald-900/10 rounded-xl text-[10px] font-bold uppercase tracking-widest text-emerald-700 hover:bg-emerald-900/10 transition-colors"
               >
@@ -245,7 +297,7 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
         })}
       </div>
 
-      <button 
+      <button
         onClick={() => setShowCatalog(true)}
         className="w-full flex items-center justify-center gap-2 p-6 border-2 border-dashed border-emerald-900/10 rounded-3xl text-emerald-700 hover:border-emerald-500 hover:text-emerald-400 transition-all active:scale-[0.98] bg-emerald-950/5"
       >
@@ -261,11 +313,11 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
               <h2 className="text-xl font-black uppercase tracking-tighter text-white">Catálogo Táctico</h2>
               <button onClick={() => setShowCatalog(false)} className="p-2 hover:bg-neutral-800 rounded-full transition-colors text-white"><X /></button>
             </div>
-            
+
             <div className="p-6 space-y-4 bg-neutral-900/30">
               <div className="flex items-center gap-3 bg-black/40 rounded-2xl px-4 py-3 border border-emerald-900/10 focus-within:border-emerald-500/50 transition-colors">
                 <Search size={18} className="text-emerald-700" />
-                <input 
+                <input
                   autoFocus
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -279,11 +331,10 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
-                      selectedCategory === cat 
-                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20' 
-                      : 'bg-neutral-800/50 text-neutral-500 hover:bg-neutral-800'
-                    }`}
+                    className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${selectedCategory === cat
+                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
+                        : 'bg-neutral-800/50 text-neutral-500 hover:bg-neutral-800'
+                      }`}
                   >
                     {cat}
                   </button>
@@ -295,7 +346,7 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
               {filteredCatalog.length > 0 ? (
                 filteredCatalog.map((info, idx) => (
                   <div key={idx} className="flex gap-2">
-                    <button 
+                    <button
                       onClick={() => addExerciseFromCatalog(info)}
                       className="flex-1 flex items-center justify-between p-5 bg-neutral-800/30 hover:bg-emerald-900/20 border border-emerald-900/5 hover:border-emerald-500/30 transition-all rounded-3xl group"
                     >
@@ -309,7 +360,7 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
                       </div>
                       <Plus size={20} className="text-emerald-500" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setPreviewExercise(info)}
                       className="p-5 bg-neutral-800/30 rounded-3xl border border-emerald-900/5 hover:bg-emerald-600 hover:text-white text-emerald-600 transition-all"
                     >

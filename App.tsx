@@ -22,10 +22,10 @@ const App: React.FC = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     const savedRoutines = localStorage.getItem(ROUTINES_KEY);
     if (saved) {
-      try { setWorkouts(JSON.parse(saved)); } catch (e) {}
+      try { setWorkouts(JSON.parse(saved)); } catch (e) { }
     }
     if (savedRoutines) {
-      try { setRoutines(JSON.parse(savedRoutines)); } catch (e) {}
+      try { setRoutines(JSON.parse(savedRoutines)); } catch (e) { }
     }
   }, []);
 
@@ -44,6 +44,12 @@ const App: React.FC = () => {
     localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
   };
 
+  const updateRoutine = (updatedRoutine: Routine) => {
+    const updated = routines.map(r => r.id === updatedRoutine.id ? updatedRoutine : r);
+    setRoutines(updated);
+    localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
+  };
+
   const deleteRoutine = (id: string) => {
     const updated = routines.filter(r => r.id !== id);
     setRoutines(updated);
@@ -58,9 +64,9 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (isLogging) {
       return (
-        <WorkoutLogger 
-          onSave={saveWorkout} 
-          onCancel={() => { setIsLogging(false); setLoadedRoutine(undefined); }} 
+        <WorkoutLogger
+          onSave={saveWorkout}
+          onCancel={() => { setIsLogging(false); setLoadedRoutine(undefined); }}
           history={workouts}
           routineToLoad={loadedRoutine}
         />
@@ -74,21 +80,21 @@ const App: React.FC = () => {
         return (
           <div className="flex flex-col items-center justify-center p-8 text-center h-[70vh]">
             <div className="w-24 h-24 bg-emerald-600/10 rounded-full flex items-center justify-center mb-6 relative">
-               <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-10" />
-               <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-emerald-900/40">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M2 12h20" /></svg>
-               </div>
+              <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-10" />
+              <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-emerald-900/40">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M2 12h20" /></svg>
+              </div>
             </div>
             <h2 className="text-2xl font-black uppercase italic mb-2">Supérate hoy</h2>
             <p className="text-sm text-neutral-500 mb-8 max-w-xs leading-relaxed">Cada repetición cuenta. Elige cómo quieres empezar.</p>
             <div className="flex flex-col gap-3 w-full max-w-[200px]">
-              <button 
+              <button
                 onClick={() => startTraining()}
                 className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-bold uppercase tracking-widest hover:bg-emerald-500 transition-all active:scale-95 shadow-xl shadow-emerald-900/40"
               >
                 Entreno Libre
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab(AppTab.ROUTINES)}
                 className="px-8 py-3 bg-neutral-900 text-emerald-500 border border-emerald-900/20 rounded-2xl font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all"
               >
@@ -99,11 +105,12 @@ const App: React.FC = () => {
         );
       case AppTab.ROUTINES:
         return (
-          <RoutinesTab 
-            routines={routines} 
-            onAddRoutine={addRoutine} 
+          <RoutinesTab
+            routines={routines}
+            onAddRoutine={addRoutine}
+            onUpdateRoutine={updateRoutine}
             onDeleteRoutine={deleteRoutine}
-            onStartRoutine={startTraining} 
+            onStartRoutine={startTraining}
           />
         );
       case AppTab.TRAINER:
