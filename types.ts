@@ -26,9 +26,10 @@ export interface Workout {
   title: string;
   exercises: Exercise[];
   caloriesBurned: number;
+  duration: number; // Duración en segundos
   notes?: string;
   mood?: 'great' | 'good' | 'neutral' | 'tired' | 'bad';
-  weekNumber?: number; // Para facilitar el filtrado semanal
+  weekNumber?: number;
 }
 
 export interface Message {

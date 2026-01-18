@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Save, X, Check, Search, Info, Eye } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Plus, Trash2, Save, X, Check, Search, Info, Eye, Clock } from 'lucide-react';
 import { Workout, Exercise, Set } from '../types';
 import { EXERCISE_CATALOG, ExerciseInfo } from '../data/exercises';
 import ExercisePreview from './ExercisePreview';
@@ -25,10 +25,27 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
       }))
     })) || []
   );
+  
+  const [seconds, setSeconds] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [showCatalog, setShowCatalog] = useState(false);
   const [previewExercise, setPreviewExercise] = useState<ExerciseInfo | null>(null);
+
+  // Timer logic
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSeconds(s => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatTime = (totalSeconds: number) => {
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    return `${hrs > 0 ? hrs + ':' : ''}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const filteredCatalog = useMemo(() => {
     return EXERCISE_CATALOG.filter(e => {
@@ -107,7 +124,8 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
       date: new Date().toISOString(),
       title,
       exercises,
-      caloriesBurned: Math.round(calories)
+      caloriesBurned: Math.round(calories),
+      duration: seconds
     };
     onSave(workout);
   };
@@ -116,25 +134,31 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
     <div className="p-6 space-y-6 bg-neutral-950 min-h-full pb-32 animate-in fade-in slide-in-from-right-4 duration-500">
       {previewExercise && <ExercisePreview exercise={previewExercise} onClose={() => setPreviewExercise(null)} />}
 
-      <div className="flex items-center justify-between sticky top-0 bg-neutral-950/90 backdrop-blur z-20 pb-4 border-b border-emerald-900/20">
+      <div className="sticky top-0 bg-neutral-950/90 backdrop-blur-md z-20 pb-4 border-b border-emerald-900/20 pt-2">
+        <div className="flex items-center justify-between mb-2">
+           <div className="flex items-center gap-2 text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+             <Clock size={14} className="animate-pulse" />
+             <span className="text-xs font-mono font-bold">{formatTime(seconds)}</span>
+           </div>
+           <div className="flex gap-3">
+              <button onClick={onCancel} className="p-2 text-neutral-600 hover:text-white transition-colors">
+                <X size={24} />
+              </button>
+              <button 
+                onClick={handleSave} 
+                disabled={exercises.length === 0}
+                className="p-2 bg-emerald-600 rounded-2xl text-white disabled:opacity-30 transition-all hover:bg-emerald-500 shadow-lg shadow-emerald-900/30"
+              >
+                <Save size={24} />
+              </button>
+           </div>
+        </div>
         <input 
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="bg-transparent text-xl font-black outline-none w-2/3 border-b border-transparent focus:border-emerald-500 transition-colors placeholder:text-neutral-800 text-white"
+          className="bg-transparent text-xl font-black outline-none w-full border-b border-transparent focus:border-emerald-500 transition-colors placeholder:text-neutral-800 text-white"
           placeholder="Nombre del entrenamiento"
         />
-        <div className="flex gap-3">
-          <button onClick={onCancel} className="p-2 text-neutral-600 hover:text-white transition-colors">
-            <X size={24} />
-          </button>
-          <button 
-            onClick={handleSave} 
-            disabled={exercises.length === 0}
-            className="p-2 bg-emerald-600 rounded-2xl text-white disabled:opacity-30 transition-all hover:bg-emerald-500 shadow-lg shadow-emerald-900/30"
-          >
-            <Save size={24} />
-          </button>
-        </div>
       </div>
 
       <div className="space-y-8 mt-6">
@@ -180,6 +204,7 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
                     <span className="text-xs font-mono text-neutral-600 pl-2">{setIdx + 1}</span>
                     <input
                       type="number"
+                      inputMode="decimal"
                       value={set.weight || ''}
                       placeholder="0"
                       onChange={(e) => updateSet(ex.id, set.id, { weight: parseFloat(e.target.value) || 0 })}
@@ -187,6 +212,7 @@ const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ onSave, onCancel, history
                     />
                     <input
                       type="number"
+                      inputMode="numeric"
                       value={set.reps || ''}
                       placeholder="0"
                       onChange={(e) => updateSet(ex.id, set.id, { reps: parseInt(e.target.value) || 0 })}
