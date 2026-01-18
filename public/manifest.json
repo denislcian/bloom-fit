@@ -3,6 +3,8 @@
   "short_name": "BloomFit",
   "description": "App personal de entrenamiento táctico e hipertrofia.",
   "start_url": "/",
+  "scope": "/",
+  "orientation": "portrait",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#10b981",
